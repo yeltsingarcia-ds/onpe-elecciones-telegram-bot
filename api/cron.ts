@@ -60,10 +60,18 @@ async function fetchSummary() {
 
 // ================= TOP 3 =================
 function extractTop3(snapshotText: string) {
-  const data = JSON.parse(snapshotText);
+  const parsed = JSON.parse(snapshotText);
 
-  // Ajuste típico ONPE
-  const candidatos = data ?? [];
+  // 🔥 Detectar estructura real
+  const candidatos =
+    parsed?.data ??
+    parsed?.resultados ??
+    parsed ??
+    [];
+
+  if (!Array.isArray(candidatos)) {
+    throw new Error("Formato inesperado de ONPE");
+  }
 
   return candidatos
     .map((c: any) => ({
