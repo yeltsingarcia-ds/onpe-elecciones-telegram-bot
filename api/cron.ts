@@ -194,7 +194,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const imageUrl = buildImage(top3);
-    const message = buildMessage(summary, top3);
+    const message = buildMessage(summary, top3) + "\n\n🟢 NUEVO BOT";
 
     await sendTelegram(imageUrl, message);
 
