@@ -1,5 +1,18 @@
 import { put } from "@vercel/blob";
 
+export default async function handler(req: any, res: any) {
+  try {
+    const secret = req.query?.secret;
+
+    if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
+      return res.status(401).json({ ok: false, error: "unauthorized" });
+    }
+
+    const [snapshot, summary] = await Promise.all([
+      fetchSnapshot(),
+      fetchSummary(),
+    ]);
+
 // ================= ENV =================
 const BOT_TOKEN = process.env.BOT_TOKEN!;
 const CHAT_ID = process.env.CHAT_ID!;
