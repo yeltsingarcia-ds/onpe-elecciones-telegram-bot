@@ -62,27 +62,32 @@ async function fetchSummary() {
 function extractTop3(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
 
-  // 🔥 Detectar estructura real
+  // 🔥 estructura real ONPE
   const candidatos =
+    parsed?.data?.resultados ??
     parsed?.data ??
     parsed?.resultados ??
-    parsed ??
     [];
 
   if (!Array.isArray(candidatos)) {
+    console.log("DEBUG ONPE:", JSON.stringify(parsed, null, 2));
     throw new Error("Formato inesperado de ONPE");
   }
 
   return candidatos
     .map((c: any) => ({
-      nombre: c.nombre ?? c.nombreCompleto ?? "N/A",
-      votos: Number(c.votos ?? c.totalVotos ?? 0),
-      porcentaje: Number(c.porcentaje ?? 0),
+      nombre:
+        c.nombre ??
+        c.nombreCompleto ??
+        c.organizacionPolitica ??
+        "N/A",
+      votos: Number(c.votos ?? c.totalVotos ?? c.voto ?? 0),
+      porcentaje: Number(c.porcentaje ?? c.porcentajeVotos ?? 0),
     }))
     .sort((a: any, b: any) => b.votos - a.votos)
     .slice(0, 3);
 }
-
+    
 // ================= UTILS =================
 function calcDiff(a: any, b: any) {
   return {
