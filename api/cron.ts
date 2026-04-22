@@ -62,7 +62,6 @@ async function fetchSummary() {
 function extractTop3(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
 
-  // 🔥 estructura real ONPE
   const candidatos =
     parsed?.data?.resultados ??
     parsed?.data ??
