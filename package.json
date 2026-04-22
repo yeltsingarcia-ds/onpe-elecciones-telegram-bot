@@ -1,0 +1,9 @@
+{
+  "name": "onpe-bot",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@vercel/blob": "^0.23.4",
+    "zod": "^3.23.8"
+  }
+}
