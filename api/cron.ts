@@ -177,13 +177,86 @@ async function sendTelegram(photo: string, caption: string) {
 
 // ================= IMAGEN =================
 function buildImage(top4: any[]) {
-  const names = top4.map((c) => c.nombre).join("|");
-  const votes = top4.map((c) => c.votos).join("|");
-  const percentages = top4.map((c) => c.porcentaje).join("|");
+  const labels = top4.map((c) => shortName(c.nombre));
 
-  return `${process.env.BASE_URL}/api/image?names=${encodeURIComponent(
-    names
-  )}&votes=${votes}&percentages=${percentages}`;
+  const votes = top4.map((c) => c.votos);
+
+  const voteLabels = top4.map((c) =>
+    `${formatVotesONPE(c.votos)}\n${c.porcentaje.toFixed(3)}%`
+  );
+
+  const chartConfig = {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          data: votes,
+          backgroundColor: "#165180",
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      layout: {
+        padding: {
+          top: 40,
+          bottom: 20
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: "Top candidatos ONPE",
+          color: "#000",
+          font: { size: 18 }
+        },
+        datalabels: {
+          anchor: "end",
+          align: "start",
+          color: "#ffffff",
+          font: {
+            weight: "bold",
+            size: 12
+          },
+          formatter: (value: number, ctx: any) => {
+            return voteLabels[ctx.dataIndex];
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#000",
+            font: { size: 12 }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            color: "#000"
+          }
+        }
+      }
+    },
+    plugins: ["chartjs-plugin-datalabels"]
+  };
+
+  return `https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(chartConfig)
+  )}`;
+}
+
+// ================= HELPER FORMATO ONPE =================
+function formatVotesONPE(n: number) {
+  const parts = new Intl.NumberFormat("en-US").format(n).split(",");
+  
+  if (parts.length === 3) {
+    return `${parts[0]}'${parts[1]},${parts[2]}`;
+  }
+
+  return n.toString();
 }
 
 // ================= STATE =================
@@ -200,7 +273,6 @@ async function getPrevState() {
 async function saveState(state: any) {
   const blob = await put(STATE_PATH, JSON.stringify(state), {
     access: "public",
-    allowOverwrite: true,
     addRandomSuffix: false,
   });
 
