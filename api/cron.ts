@@ -9,7 +9,7 @@ const ONPE_SUMMARY_URL = process.env.ONPE_SUMMARY_URL!;
 
 const STATE_PATH = "onpe/latest-state.json";
 
-// ================= HEADERS ONPE (FIX REAL) =================
+// ================= HEADERS ONPE =================
 const ONPE_HEADERS = {
   accept: "*/*",
   "content-type": "application/json",
@@ -97,7 +97,8 @@ function buildMessage(summary: any, top: any[]) {
   const d23 = calcDiff(top[1], top[2]);
   const d34 = calcDiff(top[2], top[3]);
 
-  return `
+  return `📊 *Elecciones Perú - ONPE*
+
 🕒 Actualizado al ${new Date(summary.fechaActualizacion).toLocaleString("es-PE")}
 
 🗳 *Estado del conteo*
@@ -156,29 +157,34 @@ function buildImage(top4: any[]) {
       labels,
       datasets: [
         {
-          label: " ", // 👈 FIX: elimina "undefined"
+          label: " ", // elimina "undefined"
           data: votes,
           backgroundColor: "#165180",
         }
       ]
     },
     options: {
+      layout: {
+        padding: { top: 30 }
+      },
       plugins: {
         legend: {
-          display: false // 👈 FIX leyenda
+          display: false
         },
         datalabels: {
-          display: true, // 👈 CLAVE
+          display: true,
           color: "#ffffff",
           anchor: "center",
           align: "center",
+          clamp: true,
+          clip: false,
           font: {
             weight: "bold",
             size: 11
           },
           formatter: (_: any, ctx: any) => {
             const i = ctx.dataIndex;
-            return `${formatVotesONPE(votes[i])}\n${percentages[i].toFixed(3)}%`;
+            return `${formatVotesONPE(votes[i])} (${percentages[i].toFixed(2)}%)`;
           }
         }
       }
@@ -187,8 +193,9 @@ function buildImage(top4: any[]) {
 
   return `https://quickchart.io/chart?c=${encodeURIComponent(
     JSON.stringify(chartConfig)
-  )}&plugins=chartjs-plugin-datalabels`; // 👈 🔥 ESTE ES EL FIX REAL
+  )}&plugins=chartjs-plugin-datalabels`;
 }
+
 // ================= STATE =================
 async function getPrevState() {
   try {
@@ -214,7 +221,6 @@ function hasChanges(prev: any, next: any) {
   return prev.top3.some((p: any, i: number) => p.votos !== next.top3[i].votos);
 }
 
-// ================= HANDLER =================
 // ================= HANDLER =================
 export default async function handler(req: any, res: any) {
   try {
@@ -243,29 +249,9 @@ export default async function handler(req: any, res: any) {
     const imageUrl = buildImage(top);
     const message = buildMessage(summary, top);
 
-    // ================= HEADER =================
-    const headerRes = await fetch(
-      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: CHAT_ID,
-          text: "📊 *Elecciones Perú - ONPE*",
-          parse_mode: "Markdown"
-        }),
-      }
-    );
-
-    if (!headerRes.ok) {
-      const text = await headerRes.text();
-      throw new Error(`Telegram header error: ${text}`);
-    }
-
-    // ================= IMAGEN + DATA =================
+    // ✅ UN SOLO MENSAJE (imagen + texto)
     await sendTelegram(imageUrl, message);
 
-    // ================= STATE =================
     await saveState(nextState);
 
     return res.json({ ok: true, sent: true });
