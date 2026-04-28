@@ -156,7 +156,7 @@ function buildImage(top4: any[]) {
       labels,
       datasets: [
         {
-          label: "", // elimina "undefined"
+          label: " ", // 👈 FIX: elimina "undefined"
           data: votes,
           backgroundColor: "#165180",
         }
@@ -164,26 +164,31 @@ function buildImage(top4: any[]) {
     },
     options: {
       plugins: {
-        legend: { display: false },
-        title: { display: false },
+        legend: {
+          display: false // 👈 FIX leyenda
+        },
         datalabels: {
+          display: true, // 👈 CLAVE
+          color: "#ffffff",
           anchor: "center",
           align: "center",
-          color: "#ffffff",
-          font: { weight: "bold", size: 11 },
+          font: {
+            weight: "bold",
+            size: 11
+          },
           formatter: (_: any, ctx: any) => {
             const i = ctx.dataIndex;
             return `${formatVotesONPE(votes[i])}\n${percentages[i].toFixed(3)}%`;
           }
         }
       }
-    },
-    plugins: ["chartjs-plugin-datalabels"]
+    }
   };
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(chartConfig)
+  )}&plugins=chartjs-plugin-datalabels`; // 👈 🔥 ESTE ES EL FIX REAL
 }
-
 // ================= STATE =================
 async function getPrevState() {
   try {
@@ -209,6 +214,7 @@ function hasChanges(prev: any, next: any) {
   return prev.top3.some((p: any, i: number) => p.votos !== next.top3[i].votos);
 }
 
+// ================= HANDLER =================
 // ================= HANDLER =================
 export default async function handler(req: any, res: any) {
   try {
@@ -237,11 +243,29 @@ export default async function handler(req: any, res: any) {
     const imageUrl = buildImage(top);
     const message = buildMessage(summary, top);
 
-    await sendTelegram(
-      imageUrl,
-      `📊 *Elecciones Perú - ONPE*\n\n${message}`
+    // ================= HEADER =================
+    const headerRes = await fetch(
+      `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text: "📊 *Elecciones Perú - ONPE*",
+          parse_mode: "Markdown"
+        }),
+      }
     );
 
+    if (!headerRes.ok) {
+      const text = await headerRes.text();
+      throw new Error(`Telegram header error: ${text}`);
+    }
+
+    // ================= IMAGEN + DATA =================
+    await sendTelegram(imageUrl, message);
+
+    // ================= STATE =================
     await saveState(nextState);
 
     return res.json({ ok: true, sent: true });
