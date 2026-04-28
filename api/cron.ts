@@ -56,18 +56,35 @@ function extractTop3(snapshotText: string) {
     throw new Error("Formato inesperado de ONPE");
   }
 
-  const mapped = candidatos.map((c: any) => ({
-    nombre: c.nombreCandidato ?? "N/A",
-    votos: Number(c.totalVotosValidos ?? 0),
-    porcentaje: Number(c.porcentajeVotosValidos ?? 0),
-  }));
+  const mapped = candidatos.map((c: any) => {
+    const nombreRaw = c.nombreCandidato;
 
-  return mapped
-    .sort((a: any, b: any) => b.votos - a.votos)
+    const nombre =
+      nombreRaw && nombreRaw.trim() !== ""
+        ? nombreRaw
+        : "N/A";
+
+    const votos = Number(c.totalVotosValidos ?? 0);
+
+    return {
+      nombre,
+      votos,
+    };
+  });
+
+  // 🔥 FILTRO CLAVE (evita basura ONPE)
+  const valid = mapped.filter(
+    (c) => c.nombre !== "N/A" && c.votos > 0
+  );
+
+  return valid
+    .sort((a, b) => b.votos - a.votos)
     .slice(0, 3);
 }
 
 // ================= UTILS =================
+
+// 🔥 BRECHA REAL (% vs candidato inferior)
 function calcDiff(a: any, b: any) {
   const votosDiff = a.votos - b.votos;
 
@@ -78,6 +95,10 @@ function calcDiff(a: any, b: any) {
     votos: votosDiff,
     porcentaje: Number(porcentajeDiff.toFixed(2)),
   };
+}
+
+function format(n: number) {
+  return new Intl.NumberFormat("es-PE").format(n);
 }
 
 // ================= MENSAJE =================
