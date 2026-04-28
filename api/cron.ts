@@ -176,11 +176,30 @@ async function sendTelegram(photo: string, caption: string) {
 }
 
 // ================= IMAGEN =================
-function buildImage(top3: any[]) {
-  const names = top3.map((c) => c.nombre.split(" ")[0]).join(" vs ");
-  const votes = top3.map((c) => c.votos).join(",");
+function buildImage(top4: any[]) {
+  const labels = top4
+    .map((c) => {
+      const parts = c.nombre.split(" ");
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    })
+    .join("|");
 
-  return `https://image-charts.com/chart?cht=bvg&chs=700x400&chd=t:${votes}&chl=${encodeURIComponent(names)}`;
+  const values = top4.map((c) => c.votos).join(",");
+
+  return `https://image-charts.com/chart?
+cht=bvg
+&chs=900x500
+&chd=t:${values}
+&chl=${encodeURIComponent(labels)}
+&chxt=x,y
+&chds=a
+&chxr=1,0,${Math.max(...top4.map(c => c.votos))}
+&chco=2d70b3
+&chtt=Top candidatos ONPE
+&chts=000000,20
+&chg=20,20
+&chbh=40
+`.replace(/\s/g, "");
 }
 
 // ================= STATE =================
