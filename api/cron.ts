@@ -49,10 +49,12 @@ async function fetchSummary() {
 function extractTop3(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
 
+  // 👇 intenta todas las estructuras posibles
   const candidatos =
-    parsed?.data?.resultados ??
+    parsed?.data?.items ??
     parsed?.data ??
     parsed?.resultados ??
+    parsed?.data?.resultados ??
     [];
 
   if (!Array.isArray(candidatos)) {
@@ -60,17 +62,39 @@ function extractTop3(snapshotText: string) {
     throw new Error("Formato inesperado de ONPE");
   }
 
-  return candidatos
-    .map((c: any) => ({
-      nombre:
-        c.nombre ??
-        c.nombreCompleto ??
-        c.organizacionPolitica ??
-        "N/A",
-      votos: Number(c.votos ?? c.totalVotos ?? c.voto ?? 0),
-      porcentaje: Number(c.porcentaje ?? c.porcentajeVotos ?? 0),
-    }))
-    .sort((a: any, b: any) => b.votos - a.votos)
+  const mapped = candidatos.map((c: any) => {
+    const votos =
+      c.votos ??
+      c.totalVotos ??
+      c.votosValidos ??
+      c.voto ??
+      0;
+
+    const porcentaje =
+      c.porcentaje ??
+      c.porcentajeVotos ??
+      c.porcentajeValidos ??
+      0;
+
+    const nombre =
+      c.nombre ??
+      c.nombreCandidato ??
+      c.organizacionPolitica ??
+      c.candidato ??
+      "N/A";
+
+    return {
+      nombre,
+      votos: Number(votos),
+      porcentaje: Number(porcentaje),
+    };
+  });
+
+  // 👇 filtra basura
+  const valid = mapped.filter((c) => c.votos > 0);
+
+  return valid
+    .sort((a, b) => b.votos - a.votos)
     .slice(0, 3);
 }
     
