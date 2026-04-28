@@ -45,8 +45,8 @@ async function fetchSummary() {
   return json.data ?? json;
 }
 
-// ================= TOP 3 =================
-function extractTop3(snapshotText: string) {
+// ================= TOP =================
+function extractTop(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
 
   const candidatos = parsed?.data ?? [];
@@ -60,13 +60,11 @@ function extractTop3(snapshotText: string) {
     const nombreRaw = c.nombreCandidato;
 
     const nombre =
-      nombreRaw && nombreRaw.trim() !== ""
-        ? nombreRaw
-        : "N/A";
+      nombreRaw && nombreRaw.trim() !== "" ? nombreRaw : "N/A";
 
     const votos = Number(c.totalVotosValidos ?? 0);
     const porcentaje = Number(c.porcentajeVotosValidos ?? 0);
-    
+
     return {
       nombre,
       votos,
@@ -74,22 +72,18 @@ function extractTop3(snapshotText: string) {
     };
   });
 
-  // 🔥 FILTRO CLAVE (evita basura ONPE)
   const valid = mapped.filter(
     (c) => c.nombre !== "N/A" && c.votos > 0
   );
 
   return valid
     .sort((a, b) => b.votos - a.votos)
-    .slice(0, 3);
+    .slice(0, 4);
 }
 
 // ================= UTILS =================
-
-// 🔥 BRECHA REAL (% vs candidato inferior)
 function calcDiff(a: any, b: any) {
   const votosDiff = a.votos - b.votos;
-
   const porcentajeDiff = a.porcentaje - b.porcentaje;
 
   return {
@@ -102,18 +96,29 @@ function format(n: number) {
   return new Intl.NumberFormat("es-PE").format(n);
 }
 
+function shortName(fullName: string) {
+  if (!fullName) return "N/A";
+
+  const parts = fullName.trim().split(/\s+/);
+  const nombre = parts[0] ?? "";
+  const apellido = parts[1] ?? "";
+
+  return `${nombre} ${apellido}`.trim();
+}
+
 // ================= MENSAJE =================
-function buildMessage(summary: any, top3: any[]) {
-  if (!top3 || top3.length < 3) {
+function buildMessage(summary: any, top: any[]) {
+  if (!top || top.length < 4) {
     return `
 📊 *Elecciones Perú - ONPE*
 
-⚠️ Aún no hay resultados suficientes
+⚠️ Aún no hay suficientes datos
 `;
   }
 
-  const d12 = calcDiff(top3[0], top3[1]);
-  const d23 = calcDiff(top3[1], top3[2]);
+  const d12 = calcDiff(top[0], top[1]);
+  const d23 = calcDiff(top[1], top[2]);
+  const d34 = calcDiff(top[2], top[3]);
 
   return `
 📊 *Elecciones Perú - ONPE*
@@ -125,8 +130,15 @@ function buildMessage(summary: any, top3: any[]) {
 • Total votos válidos: ${format(summary.totalVotosValidos)}
 
 📉 *Diferencias*
-• 1 vs 2: +${format(d12.votos)} votos (${d12.porcentaje}%)
-• 2 vs 3: +${format(d23.votos)} votos (${d23.porcentaje}%)
+
+• ${shortName(top[0].nombre)} vs ${shortName(top[1].nombre)}:
+${d12.votos >= 0 ? "+" : ""}${format(d12.votos)} votos (${d12.porcentaje}%)
+
+• ${shortName(top[1].nombre)} vs ${shortName(top[2].nombre)}:
+${d23.votos >= 0 ? "+" : ""}${format(d23.votos)} votos (${d23.porcentaje}%)
+
+• ${shortName(top[2].nombre)} vs ${shortName(top[3].nombre)}:
+${d34.votos >= 0 ? "+" : ""}${format(d34.votos)} votos (${d34.porcentaje}%)
 `;
 }
 
@@ -150,13 +162,13 @@ async function sendTelegram(photo: string, caption: string) {
 }
 
 // ================= IMAGEN =================
-function buildImage(top3: any[]) {
-  if (!top3 || top3.length < 3) {
+function buildImage(top: any[]) {
+  if (!top || top.length < 3) {
     return "https://placehold.co/1200x630/png?text=Sin+datos+ONPE";
   }
 
   return `https://placehold.co/1200x630/png?text=${encodeURIComponent(
-    `${top3[0].nombre} vs ${top3[1].nombre} vs ${top3[2].nombre}`
+    `${shortName(top[0].nombre)} vs ${shortName(top[1].nombre)} vs ${shortName(top[2].nombre)}`
   )}`;
 }
 
@@ -207,13 +219,13 @@ export default async function handler(req: any, res: any) {
       fetchSummary(),
     ]);
 
-    const top3 = extractTop3(snapshot);
+    const top = extractTop(snapshot);
 
-    console.log("TOP3:", top3);
+    console.log("TOP:", top);
 
     const nextState = {
       updatedAt: summary.fechaActualizacion,
-      top3,
+      top3: top.slice(0, 3),
     };
 
     const prevState = await getPrevState();
@@ -222,8 +234,8 @@ export default async function handler(req: any, res: any) {
       return res.status(200).json({ ok: true, sent: false });
     }
 
-    const imageUrl = buildImage(top3);
-    const message = buildMessage(summary, top3);
+    const imageUrl = buildImage(top);
+    const message = buildMessage(summary, top);
 
     await sendTelegram(imageUrl, message);
 
