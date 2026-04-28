@@ -176,15 +176,28 @@ async function sendTelegram(photo: string, caption: string) {
 }
 
 // ================= IMAGEN =================
+function formatVotes(n: number) {
+  return new Intl.NumberFormat("es-PE").format(n).replace(/,/g, "'");
+}
+
+function getShortName(full: string) {
+  const parts = full.split(" ");
+  if (parts.length >= 2) {
+    return `${parts[0]} ${parts[parts.length - 1]}`;
+  }
+  return parts[0];
+}
+
 function buildImage(top4: any[]) {
-  const labels = top4
-    .map((c) => {
-      const parts = c.nombre.split(" ");
-      return `${parts[0]} ${parts[parts.length - 1]}`;
-    })
-    .join("|");
+  const labels = top4.map((c) => getShortName(c.nombre)).join("|");
 
   const values = top4.map((c) => c.votos).join(",");
+
+  const annotations = top4
+    .map((c) => {
+      return `${formatVotes(c.votos)} (${c.porcentaje.toFixed(2)}%)`;
+    })
+    .join("|");
 
   return `https://image-charts.com/chart?
 cht=bvg
@@ -192,13 +205,16 @@ cht=bvg
 &chd=t:${values}
 &chl=${encodeURIComponent(labels)}
 &chxt=x,y
+&chco=165180
 &chds=a
 &chxr=1,0,${Math.max(...top4.map(c => c.votos))}
-&chco=2d70b3
+&chdl=${encodeURIComponent(annotations)}
+&chdlp=b
 &chtt=Top candidatos ONPE
-&chts=000000,20
+&chts=ffffff,20
+&chf=bg,s,000000
 &chg=20,20
-&chbh=40
+&chbh=60
 `.replace(/\s/g, "");
 }
 
