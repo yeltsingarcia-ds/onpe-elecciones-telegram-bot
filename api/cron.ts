@@ -177,13 +177,10 @@ async function sendTelegram(photo: string, caption: string) {
 
 // ================= IMAGEN =================
 function buildImage(top: any[]) {
-  if (!top || top.length < 3) {
-    return "https://placehold.co/1200x630/png?text=Sin+datos+ONPE";
-  }
+  const names = top.map((c) => shortName(c.nombre)).join("|");
+  const votes = top.map((c) => c.votos).join("|");
 
-  return `https://placehold.co/1200x630/png?text=${encodeURIComponent(
-    `${shortName(top[0].nombre)} vs ${shortName(top[1].nombre)} vs ${shortName(top[2].nombre)}`
-  )}`;
+  return `${process.env.BASE_URL}/api/image?names=${encodeURIComponent(names)}&votes=${votes}`;
 }
 
 // ================= STATE =================
