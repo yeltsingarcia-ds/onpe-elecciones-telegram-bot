@@ -65,10 +65,12 @@ function extractTop3(snapshotText: string) {
         : "N/A";
 
     const votos = Number(c.totalVotosValidos ?? 0);
-
+    const porcentaje = Number(c.porcentajeVotosValidos ?? 0);
+    
     return {
       nombre,
       votos,
+      porcentaje,
     };
   });
 
