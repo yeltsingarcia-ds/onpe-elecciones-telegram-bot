@@ -88,8 +88,7 @@ function extractTop3(snapshotText: string) {
 function calcDiff(a: any, b: any) {
   const votosDiff = a.votos - b.votos;
 
-  const porcentajeDiff =
-    b.votos > 0 ? (votosDiff / b.votos) * 100 : 0;
+  const porcentajeDiff = a.porcentaje - b.porcentaje;
 
   return {
     votos: votosDiff,
