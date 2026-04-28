@@ -69,14 +69,15 @@ function extractTop3(snapshotText: string) {
 
 // ================= UTILS =================
 function calcDiff(a: any, b: any) {
-  return {
-    votos: a.votos - b.votos,
-    porcentaje: Number((a.porcentaje - b.porcentaje).toFixed(2)),
-  };
-}
+  const votosDiff = a.votos - b.votos;
 
-function format(n: number) {
-  return new Intl.NumberFormat("es-PE").format(n);
+  const porcentajeDiff =
+    b.votos > 0 ? (votosDiff / b.votos) * 100 : 0;
+
+  return {
+    votos: votosDiff,
+    porcentaje: Number(porcentajeDiff.toFixed(2)),
+  };
 }
 
 // ================= MENSAJE =================
