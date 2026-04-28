@@ -57,38 +57,26 @@ function extractTop(snapshotText: string) {
   }
 
   const mapped = candidatos.map((c: any) => {
-    const nombreRaw = c.nombreCandidato;
-
-    const nombre =
-      nombreRaw && nombreRaw.trim() !== "" ? nombreRaw : "N/A";
-
-    const votos = Number(c.totalVotosValidos ?? 0);
-    const porcentaje = Number(c.porcentajeVotosValidos ?? 0);
+    const nombre = c.nombreCandidato?.trim() || "N/A";
 
     return {
       nombre,
-      votos,
-      porcentaje,
+      votos: Number(c.totalVotosValidos ?? 0),
+      porcentaje: Number(c.porcentajeVotosValidos ?? 0),
     };
   });
 
-  const valid = mapped.filter(
-    (c) => c.nombre !== "N/A" && c.votos > 0
-  );
-
-  return valid
+  return mapped
+    .filter((c) => c.nombre !== "N/A" && c.votos > 0)
     .sort((a, b) => b.votos - a.votos)
     .slice(0, 4);
 }
 
 // ================= UTILS =================
 function calcDiff(a: any, b: any) {
-  const votosDiff = a.votos - b.votos;
-  const porcentajeDiff = a.porcentaje - b.porcentaje;
-
   return {
-    votos: votosDiff,
-    porcentaje: Number(porcentajeDiff.toFixed(2)),
+    votos: a.votos - b.votos,
+    porcentaje: Number((a.porcentaje - b.porcentaje).toFixed(2)),
   };
 }
 
@@ -96,22 +84,12 @@ function format(n: number) {
   return new Intl.NumberFormat("es-PE").format(n);
 }
 
-// ================= FORMAT NAME =================
-
+// ================= NAME =================
 function shortName(fullName: string) {
-  if (!fullName) return "N/A";
-
-  const parts = fullName
-    .toLowerCase()
-    .trim()
-    .split(/\s+/);
-
-  if (parts.length === 1) {
-    return capitalize(parts[0]);
-  }
+  const parts = fullName.toLowerCase().split(/\s+/);
 
   const nombre = parts[0];
-  const apellido = parts[parts.length - 2]; // 👈 clave
+  const apellido = parts[parts.length - 2];
 
   return `${capitalize(nombre)} ${capitalize(apellido)}`;
 }
@@ -122,12 +100,8 @@ function capitalize(word: string) {
 
 // ================= MENSAJE =================
 function buildMessage(summary: any, top: any[]) {
-  if (!top || top.length < 4) {
-    return `
-📊 *Elecciones Perú - ONPE*
-
-⚠️ Aún no hay suficientes datos
-`;
+  if (top.length < 4) {
+    return `📊 *Elecciones Perú - ONPE*\n\n⚠️ Sin datos suficientes`;
   }
 
   const d12 = calcDiff(top[0], top[1]);
@@ -146,13 +120,13 @@ function buildMessage(summary: any, top: any[]) {
 📉 *Diferencias*
 
 • ${shortName(top[0].nombre)} vs ${shortName(top[1].nombre)}:
-${d12.votos >= 0 ? "+" : ""}${format(d12.votos)} votos (${d12.porcentaje}%)
++${format(d12.votos)} votos (${d12.porcentaje}%)
 
 • ${shortName(top[1].nombre)} vs ${shortName(top[2].nombre)}:
-${d23.votos >= 0 ? "+" : ""}${format(d23.votos)} votos (${d23.porcentaje}%)
++${format(d23.votos)} votos (${d23.porcentaje}%)
 
 • ${shortName(top[2].nombre)} vs ${shortName(top[3].nombre)}:
-${d34.votos >= 0 ? "+" : ""}${format(d34.votos)} votos (${d34.porcentaje}%)
++${format(d34.votos)} votos (${d34.porcentaje}%)
 `;
 }
 
@@ -175,15 +149,22 @@ async function sendTelegram(photo: string, caption: string) {
   }
 }
 
+// ================= FORMAT ONPE =================
+function formatVotesONPE(n: number) {
+  const parts = new Intl.NumberFormat("en-US").format(n).split(",");
+
+  if (parts.length === 3) {
+    return `${parts[0]}'${parts[1]},${parts[2]}`;
+  }
+
+  return n.toString();
+}
+
 // ================= IMAGEN =================
 function buildImage(top4: any[]) {
   const labels = top4.map((c) => shortName(c.nombre));
-
   const votes = top4.map((c) => c.votos);
-
-  const voteLabels = top4.map((c) =>
-    `${formatVotesONPE(c.votos)}\n${c.porcentaje.toFixed(3)}%`
-  );
+  const percentages = top4.map((c) => c.porcentaje);
 
   const chartConfig = {
     type: "bar",
@@ -198,44 +179,22 @@ function buildImage(top4: any[]) {
       ]
     },
     options: {
-      layout: {
-        padding: {
-          top: 40,
-          bottom: 20
-        }
-      },
       plugins: {
         legend: { display: false },
         title: {
           display: true,
-          text: "Top candidatos ONPE",
+          text: "📊 Elecciones Perú - ONPE",
           color: "#000",
           font: { size: 18 }
         },
         datalabels: {
-          anchor: "end",
-          align: "start",
+          anchor: "center",
+          align: "center",
           color: "#ffffff",
-          font: {
-            weight: "bold",
-            size: 12
-          },
-          formatter: (value: number, ctx: any) => {
-            return voteLabels[ctx.dataIndex];
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: {
-            color: "#000",
-            font: { size: 12 }
-          }
-        },
-        y: {
-          beginAtZero: true,
-          ticks: {
-            color: "#000"
+          font: { weight: "bold", size: 11 },
+          formatter: (_: any, ctx: any) => {
+            const i = ctx.dataIndex;
+            return `${formatVotesONPE(votes[i])}\n${percentages[i].toFixed(3)}%`;
           }
         }
       }
@@ -243,20 +202,7 @@ function buildImage(top4: any[]) {
     plugins: ["chartjs-plugin-datalabels"]
   };
 
-  return `https://quickchart.io/chart?c=${encodeURIComponent(
-    JSON.stringify(chartConfig)
-  )}`;
-}
-
-// ================= HELPER FORMATO ONPE =================
-function formatVotesONPE(n: number) {
-  const parts = new Intl.NumberFormat("en-US").format(n).split(",");
-  
-  if (parts.length === 3) {
-    return `${parts[0]}'${parts[1]},${parts[2]}`;
-  }
-
-  return n.toString();
+  return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}`;
 }
 
 // ================= STATE =================
@@ -282,13 +228,7 @@ async function saveState(state: any) {
 function hasChanges(prev: any, next: any) {
   if (!prev) return true;
 
-  for (let i = 0; i < 3; i++) {
-    if (prev.top3[i].votos !== next.top3[i].votos) {
-      return true;
-    }
-  }
-
-  return false;
+  return prev.top3.some((p: any, i: number) => p.votos !== next.top3[i].votos);
 }
 
 // ================= HANDLER =================
@@ -296,8 +236,8 @@ export default async function handler(req: any, res: any) {
   try {
     const secret = req.query?.secret;
 
-    if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
-      return res.status(401).json({ ok: false, error: "unauthorized" });
+    if (secret !== process.env.CRON_SECRET) {
+      return res.status(401).json({ error: "unauthorized" });
     }
 
     const [snapshot, summary] = await Promise.all([
@@ -307,8 +247,6 @@ export default async function handler(req: any, res: any) {
 
     const top = extractTop(snapshot);
 
-    console.log("TOP:", top);
-
     const nextState = {
       updatedAt: summary.fechaActualizacion,
       top3: top.slice(0, 3),
@@ -317,22 +255,17 @@ export default async function handler(req: any, res: any) {
     const prevState = await getPrevState();
 
     if (!hasChanges(prevState, nextState)) {
-      return res.status(200).json({ ok: true, sent: false });
+      return res.json({ ok: true, sent: false });
     }
 
     const imageUrl = buildImage(top);
     const message = buildMessage(summary, top);
 
     await sendTelegram(imageUrl, message);
-
     const stateUrl = await saveState(nextState);
 
-    return res.status(200).json({
-      ok: true,
-      sent: true,
-      imageUrl,
-      stateUrl,
-    });
+    return res.json({ ok: true, sent: true, imageUrl, stateUrl });
+
   } catch (e: any) {
     console.error(e);
     return res.status(500).json({ error: e.message });
