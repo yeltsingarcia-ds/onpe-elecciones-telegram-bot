@@ -176,11 +176,11 @@ async function sendTelegram(photo: string, caption: string) {
 }
 
 // ================= IMAGEN =================
-function buildImage(top: any[]) {
-  const names = top.map((c) => shortName(c.nombre)).join("|");
-  const votes = top.map((c) => c.votos).join("|");
+function buildImage(top3: any[]) {
+  const names = top3.map((c) => c.nombre.split(" ")[0]).join(" vs ");
+  const votes = top3.map((c) => c.votos).join(",");
 
-  return `${process.env.BASE_URL}/api/image?names=${encodeURIComponent(names)}&votes=${votes}`;
+  return `https://image-charts.com/chart?cht=bvg&chs=700x400&chd=t:${votes}&chl=${encodeURIComponent(names)}`;
 }
 
 // ================= STATE =================
