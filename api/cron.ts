@@ -49,60 +49,29 @@ async function fetchSummary() {
 function extractTop3(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
 
-  // 👇 intenta todas las estructuras posibles
-  const candidatos =
-    parsed?.data?.items ??
-    parsed?.data ??
-    parsed?.resultados ??
-    parsed?.data?.resultados ??
-    [];
+  const candidatos = parsed?.data ?? [];
 
   if (!Array.isArray(candidatos)) {
     console.log("DEBUG ONPE:", JSON.stringify(parsed, null, 2));
     throw new Error("Formato inesperado de ONPE");
   }
 
-  const mapped = candidatos.map((c: any) => {
-    const votos =
-      c.votos ??
-      c.totalVotos ??
-      c.votosValidos ??
-      c.voto ??
-      0;
+  const mapped = candidatos.map((c: any) => ({
+    nombre: c.nombreCandidato ?? "N/A",
+    votos: Number(c.totalVotosValidos ?? 0),
+    porcentaje: Number(c.porcentajeVotosValidos ?? 0),
+  }));
 
-    const porcentaje =
-      c.porcentaje ??
-      c.porcentajeVotos ??
-      c.porcentajeValidos ??
-      0;
-
-    const nombre =
-      c.nombre ??
-      c.nombreCandidato ??
-      c.organizacionPolitica ??
-      c.candidato ??
-      "N/A";
-
-    return {
-      nombre,
-      votos: Number(votos),
-      porcentaje: Number(porcentaje),
-    };
-  });
-
-  // 👇 filtra basura
-  const valid = mapped.filter((c) => c.votos > 0);
-
-  return valid
-    .sort((a, b) => b.votos - a.votos)
+  return mapped
+    .sort((a: any, b: any) => b.votos - a.votos)
     .slice(0, 3);
 }
-    
+
 // ================= UTILS =================
 function calcDiff(a: any, b: any) {
   return {
     votos: a.votos - b.votos,
-    porcentaje: (a.porcentaje - b.porcentaje).toFixed(2),
+    porcentaje: Number((a.porcentaje - b.porcentaje).toFixed(2)),
   };
 }
 
@@ -112,6 +81,14 @@ function format(n: number) {
 
 // ================= MENSAJE =================
 function buildMessage(summary: any, top3: any[]) {
+  if (!top3 || top3.length < 3) {
+    return `
+📊 *Elecciones Perú - ONPE*
+
+⚠️ Aún no hay resultados suficientes
+`;
+  }
+
   const d12 = calcDiff(top3[0], top3[1]);
   const d23 = calcDiff(top3[1], top3[2]);
 
@@ -150,8 +127,11 @@ async function sendTelegram(photo: string, caption: string) {
 }
 
 // ================= IMAGEN =================
-// TEMPORAL (luego conectamos tu render real)
 function buildImage(top3: any[]) {
+  if (!top3 || top3.length < 3) {
+    return "https://placehold.co/1200x630/png?text=Sin+datos+ONPE";
+  }
+
   return `https://placehold.co/1200x630/png?text=${encodeURIComponent(
     `${top3[0].nombre} vs ${top3[1].nombre} vs ${top3[2].nombre}`
   )}`;
@@ -206,6 +186,8 @@ export default async function handler(req: any, res: any) {
 
     const top3 = extractTop3(snapshot);
 
+    console.log("TOP3:", top3);
+
     const nextState = {
       updatedAt: summary.fechaActualizacion,
       top3,
@@ -218,7 +200,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const imageUrl = buildImage(top3);
-    const message = buildMessage(summary, top3) + "\n\n🟢 NUEVO BOT";
+    const message = buildMessage(summary, top3);
 
     await sendTelegram(imageUrl, message);
 
