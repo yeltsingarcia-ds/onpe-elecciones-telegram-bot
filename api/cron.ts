@@ -14,11 +14,8 @@ const ONPE_HEADERS = {
   accept: "*/*",
   "content-type": "application/json",
   referer: "https://resultadoelectoral.onpe.gob.pe/main/presidenciales",
-  "sec-fetch-dest": "empty",
-  "sec-fetch-mode": "cors",
-  "sec-fetch-site": "same-origin",
   "user-agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
 };
 
 // ================= FETCH =================
@@ -29,7 +26,6 @@ async function fetchSnapshot() {
   });
 
   if (!res.ok) throw new Error("Snapshot error");
-
   return res.text();
 }
 
@@ -48,25 +44,14 @@ async function fetchSummary() {
 // ================= TOP =================
 function extractTop(snapshotText: string) {
   const parsed = JSON.parse(snapshotText);
-
   const candidatos = parsed?.data ?? [];
 
-  if (!Array.isArray(candidatos)) {
-    console.log("DEBUG ONPE:", JSON.stringify(parsed, null, 2));
-    throw new Error("Formato inesperado de ONPE");
-  }
-
-  const mapped = candidatos.map((c: any) => {
-    const nombre = c.nombreCandidato?.trim() || "N/A";
-
-    return {
-      nombre,
+  return candidatos
+    .map((c: any) => ({
+      nombre: c.nombreCandidato?.trim() || "N/A",
       votos: Number(c.totalVotosValidos ?? 0),
       porcentaje: Number(c.porcentajeVotosValidos ?? 0),
-    };
-  });
-
-  return mapped
+    }))
     .filter((c) => c.nombre !== "N/A" && c.votos > 0)
     .sort((a, b) => b.votos - a.votos)
     .slice(0, 4);
@@ -87,11 +72,7 @@ function format(n: number) {
 // ================= NAME =================
 function shortName(fullName: string) {
   const parts = fullName.toLowerCase().split(/\s+/);
-
-  const nombre = parts[0];
-  const apellido = parts[parts.length - 2];
-
-  return `${capitalize(nombre)} ${capitalize(apellido)}`;
+  return `${capitalize(parts[0])} ${capitalize(parts[parts.length - 2])}`;
 }
 
 function capitalize(word: string) {
@@ -100,17 +81,11 @@ function capitalize(word: string) {
 
 // ================= MENSAJE =================
 function buildMessage(summary: any, top: any[]) {
-  if (top.length < 4) {
-    return `📊 *Elecciones Perú - ONPE*\n\n⚠️ Sin datos suficientes`;
-  }
-
   const d12 = calcDiff(top[0], top[1]);
   const d23 = calcDiff(top[1], top[2]);
   const d34 = calcDiff(top[2], top[3]);
 
   return `
-📊 *Elecciones Perú - ONPE*
-
 🕒 Actualizado al ${new Date(summary.fechaActualizacion).toLocaleString("es-PE")}
 
 🗳 *Estado del conteo*
@@ -152,12 +127,9 @@ async function sendTelegram(photo: string, caption: string) {
 // ================= FORMAT ONPE =================
 function formatVotesONPE(n: number) {
   const parts = new Intl.NumberFormat("en-US").format(n).split(",");
-
-  if (parts.length === 3) {
-    return `${parts[0]}'${parts[1]},${parts[2]}`;
-  }
-
-  return n.toString();
+  return parts.length === 3
+    ? `${parts[0]}'${parts[1]},${parts[2]}`
+    : n.toString();
 }
 
 // ================= IMAGEN =================
@@ -172,21 +144,16 @@ function buildImage(top4: any[]) {
       labels,
       datasets: [
         {
+          label: "", // 👈 elimina "undefined"
           data: votes,
           backgroundColor: "#165180",
-          borderRadius: 6
         }
       ]
     },
     options: {
       plugins: {
         legend: { display: false },
-        title: {
-          display: true,
-          text: "📊 Elecciones Perú - ONPE",
-          color: "#000",
-          font: { size: 18 }
-        },
+        title: { display: false },
         datalabels: {
           anchor: "center",
           align: "center",
@@ -227,16 +194,13 @@ async function saveState(state: any) {
 
 function hasChanges(prev: any, next: any) {
   if (!prev) return true;
-
   return prev.top3.some((p: any, i: number) => p.votos !== next.top3[i].votos);
 }
 
 // ================= HANDLER =================
 export default async function handler(req: any, res: any) {
   try {
-    const secret = req.query?.secret;
-
-    if (secret !== process.env.CRON_SECRET) {
+    if (req.query?.secret !== process.env.CRON_SECRET) {
       return res.status(401).json({ error: "unauthorized" });
     }
 
@@ -261,10 +225,15 @@ export default async function handler(req: any, res: any) {
     const imageUrl = buildImage(top);
     const message = buildMessage(summary, top);
 
-    await sendTelegram(imageUrl, message);
-    const stateUrl = await saveState(nextState);
+    // 👇 HEADER ARRIBA DE LA IMAGEN
+    await sendTelegram(
+      imageUrl,
+      `📊 *Elecciones Perú - ONPE*\n\n${message}`
+    );
 
-    return res.json({ ok: true, sent: true, imageUrl, stateUrl });
+    await saveState(nextState);
+
+    return res.json({ ok: true, sent: true });
 
   } catch (e: any) {
     console.error(e);
