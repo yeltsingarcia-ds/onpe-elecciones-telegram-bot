@@ -96,14 +96,28 @@ function format(n: number) {
   return new Intl.NumberFormat("es-PE").format(n);
 }
 
+// ================= FORMAT NAME =================
+
 function shortName(fullName: string) {
   if (!fullName) return "N/A";
 
-  const parts = fullName.trim().split(/\s+/);
-  const nombre = parts[0] ?? "";
-  const apellido = parts[1] ?? "";
+  const parts = fullName
+    .toLowerCase()
+    .trim()
+    .split(/\s+/);
 
-  return `${nombre} ${apellido}`.trim();
+  if (parts.length === 1) {
+    return capitalize(parts[0]);
+  }
+
+  const nombre = parts[0];
+  const apellido = parts[parts.length - 2]; // 👈 clave
+
+  return `${capitalize(nombre)} ${capitalize(apellido)}`;
+}
+
+function capitalize(word: string) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
 // ================= MENSAJE =================
