@@ -9,13 +9,16 @@ const ONPE_SUMMARY_URL = process.env.ONPE_SUMMARY_URL!;
 
 const STATE_PATH = "onpe/latest-state.json";
 
-// ================= HEADERS ONPE =================
+// ================= HEADERS ONPE (FIX REAL) =================
 const ONPE_HEADERS = {
   accept: "*/*",
   "content-type": "application/json",
   referer: "https://resultadoelectoral.onpe.gob.pe/main/presidenciales",
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-origin",
   "user-agent":
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36",
 };
 
 // ================= FETCH =================
@@ -25,8 +28,13 @@ async function fetchSnapshot() {
     cache: "no-store",
   });
 
-  if (!res.ok) throw new Error("Snapshot error");
-  return res.text();
+  const text = await res.text();
+
+  if (text.startsWith("<!doctype")) {
+    throw new Error("ONPE devolvió HTML (bloqueo)");
+  }
+
+  return text;
 }
 
 async function fetchSummary() {
@@ -35,9 +43,13 @@ async function fetchSummary() {
     cache: "no-store",
   });
 
-  if (!res.ok) throw new Error("Summary error");
+  const text = await res.text();
 
-  const json = await res.json();
+  if (text.startsWith("<!doctype")) {
+    throw new Error("ONPE summary devolvió HTML");
+  }
+
+  const json = JSON.parse(text);
   return json.data ?? json;
 }
 
@@ -144,7 +156,7 @@ function buildImage(top4: any[]) {
       labels,
       datasets: [
         {
-          label: "", // 👈 elimina "undefined"
+          label: "", // elimina "undefined"
           data: votes,
           backgroundColor: "#165180",
         }
@@ -225,7 +237,6 @@ export default async function handler(req: any, res: any) {
     const imageUrl = buildImage(top);
     const message = buildMessage(summary, top);
 
-    // 👇 HEADER ARRIBA DE LA IMAGEN
     await sendTelegram(
       imageUrl,
       `📊 *Elecciones Perú - ONPE*\n\n${message}`
