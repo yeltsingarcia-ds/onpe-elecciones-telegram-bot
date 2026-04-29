@@ -3,8 +3,8 @@ import { put } from "@vercel/blob";
 // ================= ENV =================
 const BOT_TOKEN = process.env.BOT_TOKEN!;
 const CHAT_ID = process.env.CHAT_ID!;
-const ONPE_URL = process.env.ONPE_URL!;
-const ONPE_SUMMARY_URL = process.env.ONPE_SUMMARY_URL!;
+// const ONPE_URL = process.env.ONPE_URL!;
+// const ONPE_SUMMARY_URL = process.env.ONPE_SUMMARY_URL!;
 const STATE_PATH = "onpe/latest-state.json";
 
 // ================= HEADERS =================
@@ -27,25 +27,24 @@ const ONPE_HEADERS = {
 // ================= FETCH =================
 async function fetchSnapshot() {
   const res = await fetch(
-    "https://elecciones.cueva.io/api/onpe/snapshot",
+    "https://onpe-data.vercel.app/snapshot",
     { cache: "no-store" }
   );
 
-  if (!res.ok) throw new Error("Snapshot proxy error");
+  if (!res.ok) throw new Error("Snapshot error");
 
   return await res.text();
 }
 
 async function fetchSummary() {
   const res = await fetch(
-    "https://elecciones.cueva.io/api/onpe/summary",
+    "https://onpe-data.vercel.app/summary",
     { cache: "no-store" }
   );
 
-  if (!res.ok) throw new Error("Summary proxy error");
+  if (!res.ok) throw new Error("Summary error");
 
-  const json = await res.json();
-  return json.data ?? json;
+  return await res.json();
 }
 
 // ================= LOGICA =================
