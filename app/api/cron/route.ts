@@ -33,28 +33,18 @@ async function fetchSnapshot() {
 
   if (!res.ok) throw new Error("Snapshot proxy error");
 
-  return res.text();
+  return await res.text();
 }
 
 async function fetchSummary() {
   const res = await fetch(
-    "https://elecciones.cueva.io/api/onpe/summary", // 👈 proxy público
+    "https://elecciones.cueva.io/api/onpe/summary",
     { cache: "no-store" }
   );
 
   if (!res.ok) throw new Error("Summary proxy error");
 
-  return res.json();
-}
-
-  const text = await res.text();
-
-  if (text.startsWith("<!doctype")) {
-    console.log("HTML RESPONSE:", text.slice(0, 500));
-    throw new Error("ONPE bloqueó request (HTML recibido)");
-  }
-
-  const json = JSON.parse(text);
+  const json = await res.json();
   return json.data ?? json;
 }
 
