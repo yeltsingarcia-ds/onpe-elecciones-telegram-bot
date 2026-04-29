@@ -10,10 +10,18 @@ const STATE_PATH = "onpe/latest-state.json";
 // ================= HEADERS =================
 const ONPE_HEADERS = {
   accept: "*/*",
+  "accept-language": "es-PE,es;q=0.9",
   "content-type": "application/json",
   referer: "https://resultadoelectoral.onpe.gob.pe/main/presidenciales",
+  origin: "https://resultadoelectoral.onpe.gob.pe",
+  "sec-ch-ua": '"Chromium";v="122", "Not(A:Brand";v="24"',
+  "sec-ch-ua-mobile": "?0",
+  "sec-ch-ua-platform": '"Windows"',
+  "sec-fetch-dest": "empty",
+  "sec-fetch-mode": "cors",
+  "sec-fetch-site": "same-origin",
   "user-agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
 };
 
 // ================= FETCH =================
@@ -41,7 +49,8 @@ async function fetchSummary() {
   const text = await res.text();
 
   if (text.startsWith("<!doctype")) {
-    throw new Error("ONPE summary devolvió HTML");
+    console.log("HTML RESPONSE:", text.slice(0, 500));
+    throw new Error("ONPE bloqueó request (HTML recibido)");
   }
 
   const json = JSON.parse(text);
