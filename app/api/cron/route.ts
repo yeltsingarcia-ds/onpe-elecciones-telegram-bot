@@ -26,25 +26,38 @@ const ONPE_HEADERS = {
 
 // ================= FETCH =================
 async function fetchSnapshot() {
-  const res = await fetch(
-    "https://onpe-data.vercel.app/snapshot",
-    { cache: "no-store" }
-  );
-
-  if (!res.ok) throw new Error("Snapshot error");
-
-  return await res.text();
+  return `{
+    "data": [
+      {
+        "nombreCandidato": "KEIKO SOFIA FUJIMORI HIGUCHI",
+        "totalVotosValidos": 2764951,
+        "porcentajeVotosValidos": 17.075
+      },
+      {
+        "nombreCandidato": "ROBERTO HELBERT SANCHEZ PALOMINO",
+        "totalVotosValidos": 1949738,
+        "porcentajeVotosValidos": 12.041
+      },
+      {
+        "nombreCandidato": "RAFAEL BERNARDO LOPEZ ALIAGA",
+        "totalVotosValidos": 1925323,
+        "porcentajeVotosValidos": 11.890
+      },
+      {
+        "nombreCandidato": "JORGE NIETO MONTESINOS",
+        "totalVotosValidos": 1782969,
+        "porcentajeVotosValidos": 11.010
+      }
+    ]
+  }`;
 }
 
 async function fetchSummary() {
-  const res = await fetch(
-    "https://onpe-data.vercel.app/summary",
-    { cache: "no-store" }
-  );
-
-  if (!res.ok) throw new Error("Summary error");
-
-  return await res.json();
+  return {
+    fechaActualizacion: Date.now(),
+    actasContabilizadas: 95.321,
+    totalVotosValidos: 16234567
+  };
 }
 
 // ================= LOGICA =================
