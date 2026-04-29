@@ -26,25 +26,26 @@ const ONPE_HEADERS = {
 
 // ================= FETCH =================
 async function fetchSnapshot() {
-  const res = await fetch(ONPE_URL, {
-    headers: ONPE_HEADERS,
-    cache: "no-store",
-  });
+  const res = await fetch(
+    "https://elecciones.cueva.io/api/onpe/snapshot",
+    { cache: "no-store" }
+  );
 
-  const text = await res.text();
+  if (!res.ok) throw new Error("Snapshot proxy error");
 
-  if (text.startsWith("<!doctype")) {
-    throw new Error("ONPE devolvió HTML");
-  }
-
-  return text;
+  return res.text();
 }
 
 async function fetchSummary() {
-  const res = await fetch(ONPE_SUMMARY_URL, {
-    headers: ONPE_HEADERS,
-    cache: "no-store",
-  });
+  const res = await fetch(
+    "https://elecciones.cueva.io/api/onpe/summary", // 👈 proxy público
+    { cache: "no-store" }
+  );
+
+  if (!res.ok) throw new Error("Summary proxy error");
+
+  return res.json();
+}
 
   const text = await res.text();
 
