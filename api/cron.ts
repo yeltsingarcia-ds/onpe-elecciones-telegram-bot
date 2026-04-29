@@ -146,68 +146,55 @@ function formatVotesONPE(n: number) {
 }
 
 // ================= IMAGEN =================
-
 function buildImage(top4: any[]) {
-  const base = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "https://TU_DOMINIO.vercel.app";
+  const labels = top4.map((c) => shortName(c.nombre));
+  const votes = top4.map((c) => c.votos);
+  const percentages = top4.map((c) => c.porcentaje);
 
-  const names = top4.map((c) => shortName(c.nombre)).join("|");
-  const votes = top4.map((c) => c.votos).join("|");
-  const pcts = top4.map((c) => c.porcentaje).join("|");
+  const chartConfig = {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: " ", // elimina "undefined"
+          data: votes,
+          backgroundColor: "#165180",
+        }
+      ]
+    },
+    options: {
+      layout: {
+        padding: { top: 30 }
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+        datalabels: {
+          display: true,
+          color: "#ffffff",
+          anchor: "center",
+          align: "center",
+          clamp: true,
+          clip: false,
+          font: {
+            weight: "bold",
+            size: 11
+          },
+          formatter: (_: any, ctx: any) => {
+            const i = ctx.dataIndex;
+            return `${formatVotesONPE(votes[i])} (${percentages[i].toFixed(2)}%)`;
+          }
+        }
+      }
+    }
+  };
 
-  return `${base}/api/image?names=${names}&votes=${votes}&pcts=${pcts}`;
+  return `https://quickchart.io/chart?c=${encodeURIComponent(
+    JSON.stringify(chartConfig)
+  )}&plugins=chartjs-plugin-datalabels`;
 }
-
-// function buildImage(top4: any[]) {
-//   const labels = top4.map((c) => shortName(c.nombre));
-//   const votes = top4.map((c) => c.votos);
-//   const percentages = top4.map((c) => c.porcentaje);
-
-//   const chartConfig = {
-//     type: "bar",
-//     data: {
-//       labels,
-//       datasets: [
-//         {
-//           label: " ", // elimina "undefined"
-//           data: votes,
-//           backgroundColor: "#165180",
-//         }
-//       ]
-//     },
-//     options: {
-//       layout: {
-//         padding: { top: 30 }
-//       },
-//       plugins: {
-//         legend: {
-//           display: false
-//         },
-//         datalabels: {
-//           display: true,
-//           color: "#ffffff",
-//           anchor: "center",
-//           align: "center",
-//           clamp: true,
-//           clip: false,
-//           font: {
-//             weight: "bold",
-//             size: 11
-//           },
-//           formatter: (_: any, ctx: any) => {
-//             const i = ctx.dataIndex;
-//             return `${formatVotesONPE(votes[i])} (${percentages[i].toFixed(2)}%)`;
-//           }
-//         }
-//       }
-//     }
-//   };
-
-//   return `https://quickchart.io/chart?c=${encodeURIComponent(
-//     JSON.stringify(chartConfig)
-//   )}&plugins=chartjs-plugin-datalabels`;
-// }
 
 // ================= STATE =================
 async function getPrevState() {
