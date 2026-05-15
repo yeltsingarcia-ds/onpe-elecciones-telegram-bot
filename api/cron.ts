@@ -97,11 +97,22 @@ function buildMessage(summary: any, top: any[]) {
   const d23 = calcDiff(top[1], top[2]);
   const d34 = calcDiff(top[2], top[3]);
 
+  const fecha = new Date(summary.fechaActualizacion).toLocaleString("es-PE", {
+    timeZone: "America/Lima",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
   return `📊 *Elecciones Perú - ONPE*
 
-🕒 Actualizado al ${new Date(summary.fechaActualizacion).toLocaleString("es-PE")}
+🕒 Actualizado al ${fecha}
 
 🗳 *Estado del conteo*
+`
 • Actas contabilizadas: ${summary.actasContabilizadas} %
 • Total votos válidos: ${format(summary.totalVotosValidos)}
 
