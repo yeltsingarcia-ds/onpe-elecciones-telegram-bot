@@ -112,7 +112,7 @@ function buildMessage(summary: any, top: any[]) {
 🕒 Actualizado al ${fecha}
 
 🗳 *Estado del conteo*
-`
+
 • Actas contabilizadas: ${summary.actasContabilizadas} %
 • Total votos válidos: ${format(summary.totalVotosValidos)}
 
